@@ -60,9 +60,7 @@ To run the program click the rightmost run button.
 
 ![result of the execution of a circuit](/images/result.png)
 
-## Authors
 
-* **Madhav Wagle** - *Initial work* - [ArchitWagle](https://github.com/ArchitWagle)
 
 
 
