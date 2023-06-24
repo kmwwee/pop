@@ -1,4 +1,4 @@
-import tkinter
+
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
 from matplotlib.backend_bases import key_press_handler
@@ -16,7 +16,8 @@ I_MAT  = np.mat([[1,0],[0,1]])
 T_MAT = np.mat([[1,0],[0,(1+1j)/sqrt(2)]])
 T_MAT_H = T_MAT.getH()
 
-gates = {'H':H_MAT, 'Px':PX_MAT, 'Py':PY_MAT, 'Pz':PZ_MAT, 'T_MAT':T_MAT, 'T_MAT_H':T_MAT_H}
+
+gates = {'H':H_MAT, 'Px':PX_MAT, 'Py':PY_MAT, 'Pz':PZ_MAT, 'I':I_MAT, 'T_MAT':T_MAT, 'T_MAT_H':T_MAT_H}
 
 def init_control_gate(qu_gate, control_qubit=1, target_qubit=2, num_qubits=2):
     index = 1
@@ -118,6 +119,16 @@ def init_toffoli_gate(qu_gate, control_qubits=[1,2], target_qubit=3, num_qubits=
 
 #print(init_toffoli_gate('Px', control_qubits=[1,2], target_qubit=3, num_qubits=3))
 
+def init_swap_gate(target1_qubit=1, target2_qubit=2, num_qubits=2):
+    index = 1
+    gate_mat = 1
+    while index <= num_qubits:
+        if index == target1_qubit or index == target2_qubit:
+            gate_mat = np.kron(gate_mat, gates['SWAP'])
+        else:
+            gate_mat = np.kron(gate_mat, np.eye(2))
+        index += 1
+    return(gate_mat)
 
     
 def print_TableForm(A):
@@ -182,6 +193,7 @@ def circuit_run(board):
                 target_qubit= row1
                 transform = init_control_gate('Px', control_qubit+1, target_qubit+1, len(board))
                 break
+           
             elif(cell[0]=="Q" and cell[3]=="i"):
                 transform = np.linalg.inv(init_qft_gate(row, int(cell[4::]), len(board)))
                 break
@@ -209,10 +221,11 @@ def circuit_run(board):
     #print(history)
     return(qubits)
 
+
+
 def on_key_press(event):
     print("you pressed {}".format(event.key))
-    key_press_handler(event, canvas, toolbar)
-
+    plt.figure.canvas.mpl_connect('key_press_event', on_key_press)
 
 root = 0
 def _quit():
@@ -221,9 +234,11 @@ def _quit():
     #print("quittingggg")
     
 def mlp_plot(n,result_vec):
+    import matplotlib.pyplot as plt
+
     format(10, '016b')
     print("final length", len(result_vec))
-    global root
+    
     print(result_vec)
     N = len(result_vec)
     temp = result_vec
@@ -232,41 +247,19 @@ def mlp_plot(n,result_vec):
     bin_i = [int(format(i, '016b')[-n:][::-1],2) for i in ind]
     print(bin_i,[format(i, '016b')[-n:][::-1] for i in ind])
     print("final length", len(temp))
-    #result_vec = [temp[i] for i in bin_i ]
-    
     
     result_vec = [abs(x[0,0])**2 for x in result_vec]
     print("final length", len(result_vec))
-    #print(result_vec)
+
     N = len(result_vec)
-    #ind = np.arange(len(result_vec))
-    
-    #print(result_vec,N,ind)
     width = 0.35
     
-    root = tkinter.Tk()
-    root.wm_title("Embedding in Tk")
-            
-    fig = Figure(figsize=(5, 4), dpi=100)
-    ax = fig.add_subplot(111)
+    fig, ax = plt.subplots(figsize=(5, 4), dpi=100)
     print("final length", len(result_vec))
     labels_bin = ['|'+format(i,'016b')[-n:]+'>' for i in ind]
     rects1 = ax.bar([format(i,'016b')[-n:] for i in ind], result_vec, width)
-    #ax.set_xticks(ind,[format(i,'016b')[-n:] for i in ind])
 
-    canvas = FigureCanvasTkAgg(fig, master=root)  # A tk.DrawingArea.
-    canvas.draw()
-    canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+    fig.canvas.mpl_connect("key_press_event", on_key_press)
+    plt.show()
 
-    toolbar = NavigationToolbar2Tk(canvas, root)
-    toolbar.update()
-    canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
-    
-    canvas.mpl_connect("key_press_event", on_key_press)
-    print("1")
-    #button.pack(side=tkinter.BOTTOM)
-    button = tkinter.Button(master=root, text="Quit", command=_quit)
-    button.pack(side=tkinter.BOTTOM)
-    tkinter.mainloop()
-    print("1")
     
