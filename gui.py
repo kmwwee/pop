@@ -1,25 +1,42 @@
+import sys
+from tkinter import simpledialog
 import pygame
 import tkinter as tk
 from tkinter.simpledialog import askstring
 from gtq import *
 from bloch_plot import *
+from QuantumChapters import *
+from multiprocessing import Process
+
+
 
 def cx_question(ques_stri):
     root = tk.Tk()
     ans = askstring('cx',ques_stri)
     root.withdraw()
     return(ans)
-TILESIZE = 80
+TILESIZE = 72
 n = int(input("Enter number of qubits: "))
 n = n+2
 #print("returned length",len(board[2:len(board)][0:max_m]))
-m=30
-max_m = 400
-BOARD_POS = (10, 10)
+m=21
+max_m = 300
+BOARD_POS = (7, 7)
 
-menu = ['H','Px','Py','Pz','C','T','QFT','QFTi']
-gate_colors = {'H':'cadetblue1','Px':'thistle','Py':'thistle','Pz':'thistle','X':'thistle','C':'lightpink','T':'lightpink','QFT':'chartreuse','QFTi':'chartreuse'}
 
+menu = ['H','Px','Py','Pz','C','T','QFT','QFTi','Learn']
+gate_colors = {'H':'cadetblue1','Px':'thistle','Py':'thistle','Pz':'thistle',
+               'X':'thistle','C':'lightpink','T':'lightpink','QFT':'chartreuse','QFTi':'chartreuse',
+               'Learn':'thistle'}
+
+def learn_button_pressed():
+    # Create a new window for learning
+    root = tk.Tk()
+    app = QuantumChapters(root)
+    root.mainloop()
+
+
+        
 def create_board_surf():
     global TILESIZE
     board_surf = pygame.Surface((TILESIZE*m, TILESIZE*n))
@@ -40,6 +57,13 @@ def create_board_surf():
         pygame.draw.line(board_surf, pygame.Color('darkgrey'), (x*TILESIZE, 0*TILESIZE),(x*TILESIZE, (1)*TILESIZE),2)
         pygame.draw.polygon(board_surf, pygame.Color('green'), [(x*TILESIZE+15,15),(x*TILESIZE+15,TILESIZE-15),((x+1)*TILESIZE-15,TILESIZE//2)])
 
+    for x in range(len(menu) - 1, len(menu)):
+        rect = pygame.Rect(x*TILESIZE, 0*TILESIZE, TILESIZE, TILESIZE)
+        pygame.draw.rect(board_surf, pygame.Color('yellow'), rect)
+        rect = pygame.Rect(x*TILESIZE, 1*TILESIZE, TILESIZE, TILESIZE)
+        pygame.draw.rect(board_surf, pygame.Color('beige'), rect)
+        pygame.draw.line(board_surf, pygame.Color('darkgrey'), (x*TILESIZE, 0*TILESIZE),(x*TILESIZE, (1)*TILESIZE),2)
+
     for x in range(len(menu)+1,m):
         rect = pygame.Rect(x*TILESIZE, 0*TILESIZE, TILESIZE, 2*TILESIZE)
         pygame.draw.rect(board_surf, pygame.Color('beige'), rect)
@@ -55,7 +79,26 @@ def create_board_surf():
             pygame.draw.line(board_surf, pygame.Color('black'), (x*TILESIZE, (y+0.5)*TILESIZE),((x+1)*TILESIZE, (y+0.5)*TILESIZE),4)
             pygame.draw.line(board_surf, pygame.Color('darkgrey'), ((x+0.5)*TILESIZE, y*TILESIZE),((x+0.5)*TILESIZE, (y+1)*TILESIZE),1)
         
+    # Draw an exit button at the end of the menu
+    rect = pygame.Rect((len(menu)+2)*TILESIZE, 0*TILESIZE, TILESIZE, TILESIZE)
+    pygame.draw.rect(board_surf, pygame.Color('red'), rect)
+    pygame.draw.line(board_surf, pygame.Color('darkgrey'), ((len(menu)+2)*TILESIZE, 0*TILESIZE),((len(menu)+2)*TILESIZE, (1)*TILESIZE),2)    
+     # Add 'Exit' text
+    font = pygame.font.Font(None, 24)  # Choose your desired font size
+    text_surf = font.render('EXIT', True, pygame.Color('black'))
+    text_rect = text_surf.get_rect(center=rect.center)
+    board_surf.blit(text_surf, text_rect)
+
+    
     return board_surf
+
+def get_learn_under_mouse(board):
+    mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) - BOARD_POS
+    x, y = [int(v // TILESIZE) for v in mouse_pos]
+    try: 
+        if x == len(menu) - 1 and y == 0 : return True
+    except IndexError: pass
+    return False
 
 def get_square_under_mouse(board):
     mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) - BOARD_POS
@@ -64,6 +107,14 @@ def get_square_under_mouse(board):
         if x >= 0 and y >= 0: return (board[y][x], x, y)
     except IndexError: pass
     return None, None, None
+
+def get_exit_under_mouse(board):
+    mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) - BOARD_POS
+    x, y = [int(v // TILESIZE) for v in mouse_pos]
+    try: 
+        if x == len(menu) + 2 and y == 0 : return True
+    except IndexError: pass
+    return False
 
 def get_gate_under_mouse(board):
     mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) - BOARD_POS
@@ -152,6 +203,7 @@ def draw_pieces(screen, board, font, selected_gate):
                     screen.blit(s2, s2.get_rect(center=pos.center).move(1, 1))
                     screen.blit(s1, s1.get_rect(center=pos.center))
 
+
             elif(gate and gate[0:3]=="QFT"):
                 if(len(gate)>3):
                     selected = x == sx and y == sy
@@ -231,9 +283,10 @@ def draw_drag(screen, board, selected_gate, font):
 
 def main():
     pygame.init()
-    
-    font = pygame.font.SysFont('', 32)
-    screen = pygame.display.set_mode((1800, 700))
+    font = pygame.font.SysFont('arial', 32)
+    # screen = pygame.display.set_mode((1800, 700))
+
+    screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     board = create_circuit()
     history = []
     print("returned length",len(board[2:len(board)][0:max_m]),n)
@@ -244,12 +297,15 @@ def main():
     selected_piece = None
     selected_gate = None
     drop_pos = None
+
+
     while True:
         piece, x, y = get_square_under_mouse(board)
         gate, x1, y1 = get_gate_under_mouse(board)
         curr_qubit,xq,yq = get_qubit_under_mouse(board)
         run = get_run_under_mouse(board)
         events = pygame.event.get()
+
         for e in events:
             if e.type == pygame.QUIT:
                 return
@@ -264,6 +320,15 @@ def main():
                     print("returned length", len(result_vec),len(board)-2)           
                     mlp_plot(n-2,result_vec)     
                     #run=False               #
+
+                if gate == "Learn":
+                   learn_button_pressed()
+
+                if get_exit_under_mouse(board):
+                   pygame.quit()
+                   sys.exit()   
+ 
+              
                 if(e.button==3):                    
                     board[y][x]=None
                     
@@ -305,3 +370,4 @@ def main():
 
 if __name__ == '__main__':    
     main()
+
